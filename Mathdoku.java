@@ -3,11 +3,16 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class Mathdoku {
+	public static final List<String> operators = Arrays.asList("+","-","*","/","=");
+	public static Set<String> grpVarSet = new HashSet<String>(); 
 	public static List<String> puzzleInput = new ArrayList<String>();
 	public static Map<String, List<int []>> groupCells = new HashMap<String, List<int []>>();
 	public static Map<String, String> groupOperators = new HashMap<String, String>();
@@ -17,46 +22,129 @@ public class Mathdoku {
 	public static int puzzleSize = 0;
 	public static int groupCount = 0;
 	public static int choiceCounter = 0;
+	public static boolean isPuzzleReady = false;
+	public static boolean isGridComplete = false;
 	
-	public static boolean loadPuzzle(BufferedReader stream) throws IOException  {
-		String thisLine = null;
-		while ((thisLine = stream.readLine()) != null) {
-            System.out.println(thisLine);
-            puzzleInput.add(thisLine);
-        } 
+	public static boolean loadPuzzle(BufferedReader stream) {
+		grpVarSet = new HashSet<String>(); 
+		puzzleInput = new ArrayList<String>();
+		groupCells = new HashMap<String, List<int []>>();
+		groupOperators = new HashMap<String, String>();
+		groupEquals = new HashMap<String, Integer >();
+		puzzleSize = 0;
+		groupCount = 0;
+		choiceCounter = 0;
+		isPuzzleReady = false;
+		isGridComplete = false;
+		if (stream == null) {
+			return false;
+		}
+		try {
+			String line = null;
+			while ((line = stream.readLine()) != null) {
+	            System.out.println(line);
+	            puzzleInput.add(line);
+	        } 
+		} catch (IOException e) {
+			System.out.println(e.getStackTrace());
+			return false;
+		}
+		if (puzzleInput.size() != 0) {
+			initializeDS();
+			return true;
+		}
+		return false;
+	}
+	
+	private static void initializeDS() {
 		String FirstLine = puzzleInput.get(0);
 		int n = FirstLine.length();
 		puzzleSize = FirstLine.length();
-		groupCount = puzzleInput.size() - puzzleSize;
-		groupArr = new String[n][n];
-		puzzleBoard = new int[n][n];
-		for (int i=0; i < n; i++) {
-			for (int j=0; j < n; j++) {
-				groupArr[i][j] = puzzleInput.get(i).split("")[j];
-				puzzleBoard[i][j] = 0;
-				List<int[]> groupCell = new ArrayList<int[]>();
-				int[] cellLoc = {i,j};
-				if (groupCells.containsKey(groupArr[i][j])) {
-					groupCell= groupCells.get(groupArr[i][j]);
-					groupCell.add(cellLoc);
-				} else {
-					groupCell.add(cellLoc);
-					groupCells.put(groupArr[i][j], groupCell );
+		if(puzzleInput.size() >= n) {
+			isGridComplete = true;
+			for (int k=0; k < n; k++) {
+				if(puzzleInput.get(k).length() != n) {
+					isGridComplete = false;
+					break;
 				}
 			}
-		}
-		for (int i=n; i < puzzleInput.size(); i++) {
-			String[] operator = puzzleInput.get(i).split(" ");
-			if (operator.length == 3) {
-				groupOperators.put(operator[0], operator[2]);
-				groupEquals.put(operator[0], Integer.parseInt(operator[1]));
+			if(isGridComplete) {
+				groupCount = puzzleInput.size() - puzzleSize;
+				groupArr = new String[n][n];
+				puzzleBoard = new int[n][n];
+				for (int i=0; i < n; i++) {
+					for (int j=0; j < n; j++) {
+						groupArr[i][j] = puzzleInput.get(i).split("")[j];
+						puzzleBoard[i][j] = 0;
+						grpVarSet.add(groupArr[i][j]);
+						List<int[]> groupCell = new ArrayList<int[]>();
+						int[] cellLoc = {i,j};
+						if (groupCells.containsKey(groupArr[i][j])) {
+							groupCell= groupCells.get(groupArr[i][j]);
+							groupCell.add(cellLoc);
+						} else {
+							groupCell.add(cellLoc);
+							groupCells.put(groupArr[i][j], groupCell );
+						}
+					}
+				}
+				for (int i=n; i < puzzleInput.size(); i++) {
+					String[] operator = puzzleInput.get(i).split(" ");
+					if (operator.length == 3) {
+						groupOperators.put(operator[0], operator[2]);
+						try {
+							groupEquals.put(operator[0], Integer.parseInt(operator[1]));
+						} catch(NumberFormatException e) {
+							System.out.print(e.getMessage());
+						}
+					}
+				}
+				System.out.println(groupCells);
+				System.out.println(groupOperators);
+				System.out.println(groupEquals);
+				System.out.println(grpVarSet);
 			}
+		} else {
+			isPuzzleReady = false;
 		}
-		System.out.println(groupCells);
-		System.out.println(groupOperators);
-		System.out.println(groupEquals);
-		return false;
 	}
+	
+	public static  boolean readyToSolve() {
+		Set<String> opKeys = groupOperators.keySet();
+		Set<String> eqKeys = groupEquals.keySet();
+		Set<String> cellKeys = groupCells.keySet();
+		if (opKeys.containsAll(grpVarSet) && eqKeys.containsAll(grpVarSet) && 
+				cellKeys.containsAll(grpVarSet)) {
+			boolean shouldContinue = true;
+			for(String op: groupOperators.values()) {
+				if (!operators.contains(op)) {
+					shouldContinue = false;
+					break;
+				}
+			}
+			if(shouldContinue) {
+				for (String grpVar: grpVarSet) {
+					String op = groupOperators.get(grpVar);
+					List<int []> cells = groupCells.get(grpVar);
+					if(op.equals("=")) {
+						if (cells.size() != 1) {
+							shouldContinue = false;
+							break;
+						}
+					} else if(op.equals("-") || op.equals("/")) {
+						if (cells.size() != 2) {
+							shouldContinue = false;
+							break;
+						}
+					}
+				}
+				if (shouldContinue) {
+					isPuzzleReady = true;
+				}
+			}			
+		}
+		return isPuzzleReady;
+	} 
 		
 	private static boolean rowValidation(int value, int rowNo, int colNo) {
 		for (int i = 0;i < puzzleSize; i++) {
@@ -172,46 +260,53 @@ public class Mathdoku {
 	}
 	
 	public static boolean solve() {
-		int[] emptyCell = nextEmptyCell();
-		if (emptyCell != null) {
-			for (int i=1; i<=puzzleSize; i++) {
-				if(valueValidation(i, emptyCell[0], emptyCell[1])) {
-					puzzleBoard[emptyCell[0]][emptyCell[1]] = i;
-					if (solve()) {
-						return true;
+		if(isPuzzleReady) {
+			int[] emptyCell = nextEmptyCell();
+			if (emptyCell != null) {
+				for (int i=1; i<=puzzleSize; i++) {
+					if(valueValidation(i, emptyCell[0], emptyCell[1])) {
+						puzzleBoard[emptyCell[0]][emptyCell[1]] = i;
+						if (solve()) {
+							return true;
+						}
+						puzzleBoard[emptyCell[0]][emptyCell[1]] = 0;
 					}
-					puzzleBoard[emptyCell[0]][emptyCell[1]] = 0;
 				}
+				choiceCounter += 1;
+				return false;
+			} else {
+				return true;
 			}
-			choiceCounter += 1;
-			return false;
-		} else {
-			return true;
 		}
+		return false;
 	}
 	
 	private static void printGrid() {
-		System.out.println("**********************");
-		for (int i=0; i < puzzleSize; i++) {
-			for (int j=0; j < puzzleSize; j++) {
-				System.out.print(puzzleBoard[i][j]+" ");
+		if(isGridComplete) {
+			System.out.println("**********************");
+			for (int i=0; i < puzzleSize; i++) {
+				for (int j=0; j < puzzleSize; j++) {
+					System.out.print(puzzleBoard[i][j]+" ");
+				}
+				System.out.println();
 			}
-			System.out.println();
+			System.out.println("**********************");
 		}
-		System.out.println("**********************");
 	}
 	
 	public static String print() {
 		String printPuzzle = "";
-		for (int i=0; i < puzzleSize; i++) {
-			for (int j=0; j < puzzleSize; j++) {
-				if (puzzleBoard[i][j] == 0) {
-					printPuzzle += groupArr[i][j];
-				} else {
-					printPuzzle += puzzleBoard[i][j];
+		if(isGridComplete) {
+			for (int i=0; i < puzzleSize; i++) {
+				for (int j=0; j < puzzleSize; j++) {
+					if (puzzleBoard[i][j] == 0) {
+						printPuzzle += groupArr[i][j];
+					} else {
+						printPuzzle += puzzleBoard[i][j];
+					}
 				}
+				printPuzzle += "\n";
 			}
-			printPuzzle += "\n";
 		}
 		return printPuzzle;	
 	}
@@ -221,16 +316,20 @@ public class Mathdoku {
 	}
 
 	public static void main(String[] args) throws IOException {
-		FileInputStream fis = new FileInputStream("/Users/prabhjotkaur/Documents/MathdocuFiles/testFile3.txt");
-//		FileInputStream fis = new FileInputStream("/Users/prabhjotkaur/Documents/MathdocuFiles/mathdoku.txt");
-		InputStreamReader r = new InputStreamReader(fis);
+		System.out.println("print:"+ print());
+		FileInputStream fis = new FileInputStream("/Users/prabhjotkaur/Documents/MathdocuFiles/empty.txt");
+		FileInputStream fis2 = new FileInputStream("/Users/prabhjotkaur/Documents/MathdocuFiles/testFile3.txt");
+		FileInputStream fis3 = new FileInputStream("/Users/prabhjotkaur/Documents/MathdocuFiles/mathdoku.txt");
+		FileInputStream fis4 = new FileInputStream("/Users/prabhjotkaur/Documents/MathdocuFiles/badData.txt");
+		InputStreamReader r = new InputStreamReader(fis4);
 		BufferedReader br = new BufferedReader(r);
-		loadPuzzle(null);
-//		loadPuzzle(br);
+		System.out.println(loadPuzzle(null));
+		System.out.println(loadPuzzle(br));
 		System.out.println("---------string-------");
 		System.out.print(print());
 		System.out.println("---------string-------");
 		printGrid();
+		System.out.println("is Puzzle ready to solve:" + readyToSolve());
 		solve();
 		printGrid();
 		System.out.println("---------string-------");
