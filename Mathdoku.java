@@ -96,14 +96,6 @@ public class Mathdoku {
 			// return false if exception is caught
 			System.out.println(e.getStackTrace());
 			return false;
-		} finally {
-			try {
-			stream.close();
-			 } catch (IOException e) {
-				// return false if exception is caught
-				System.out.println(e.getStackTrace());
-				return false;
-			 }
 		}
 		// return false if file was empty or else call initializeDS and 
 		// return true
