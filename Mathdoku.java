@@ -96,12 +96,21 @@ public class Mathdoku {
 			// return false if exception is caught
 			System.out.println(e.getStackTrace());
 			return false;
+		} finally {
+			try {
+			stream.close();
+			 } catch (IOException e) {
+				// return false if exception is caught
+				System.out.println(e.getStackTrace());
+				return false;
+			 }
 		}
 		// return false if file was empty or else call initializeDS and 
 		// return true
 		if (puzzleInput.size() != 0) {
-			initializeDS();
-			return true;
+			if(initializeDS()) {
+				return true;
+			}
 		}
 		return false;
 	}
@@ -110,10 +119,10 @@ public class Mathdoku {
 	 readyToSolve method:
 	  * output: boolean isPuzzleReady
 	  * functionality: This method is used to check if all the constraints
-	  * needed to solve the puzzle are met. If if returns true, solve can be 
+	  * needed to solve the puzzle are met. If it returns true, solve can be 
 	  * called to get the final solution.
 	 */
-	public static  boolean readyToSolve() {
+	public static boolean readyToSolve() {
 		
 		// get the set of keys from groupOperators, groupEquals and groupCells
 		Set<String> opKeys = groupOperators.keySet();
@@ -125,7 +134,7 @@ public class Mathdoku {
 				cellKeys.containsAll(grpVarSet)) {
 			boolean shouldContinue = true;
 			
-			// check if all the oerators are with in the defined set i.e. +,-,/,*,=
+			// check if all the operators are with in the defined set i.e. +,-,/,*,=
 			for(String op: groupOperators.values()) {
 				if (!operators.contains(op)) {
 					shouldContinue = false;
@@ -157,7 +166,7 @@ public class Mathdoku {
 				}
 			}			
 		}
-		return isPuzzleReady;
+		return isPuzzleReady && isGridComplete;
 	}
 	
 	/*
@@ -169,7 +178,7 @@ public class Mathdoku {
 	public static boolean solve() {
 		
 		// check if puzzle is ready to be solved
-		if(isPuzzleReady) {
+		if(isPuzzleReady && isGridComplete) {
 			
 			// get the location of next empty cell
 			int[] emptyCell = nextEmptyCell();
@@ -251,7 +260,7 @@ public class Mathdoku {
 	  * This method checks if data loaded is valid to form puzzle grouping and 
 	  * initializes all the global variables
 	 */
-	private static void initializeDS() {
+	private static boolean initializeDS() {
 		// get the number of characters in first row of the puzzleInput
 		String FirstLine = puzzleInput.get(0);
 		int n = FirstLine.length();
@@ -309,6 +318,7 @@ public class Mathdoku {
 			// if number of rows in puzzleInput are less than set isPuzzleReady to false
 			isPuzzleReady = false;
 		}
+		return isGridComplete;
 	}
 	
 	/*
@@ -445,6 +455,7 @@ public class Mathdoku {
 		
 	/*
 	 valueValidation method:
+	  * input: int value, int rowNo, int colNo
 	  * output: boolean
 	  * functionality: This method is used to validate the given value and 
 	  * its cell location
